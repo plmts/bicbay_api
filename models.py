@@ -13,11 +13,11 @@ class User(Base):
   __tablename__ = 'users'
   id = Column(Integer, primary_key=True, autoincrement=True)
   name = Column(String(50), nullable=False)
-  cpf = Column(String(11), unique=True, nullable=False)
-  cnpj = Column(String(15), unique=True, nullable=False)
+  cpf = Column(String(11), unique=True, nullable=True)
+  cnpj = Column(String(15), unique=True, nullable=True)
   email = Column(String, unique=True, nullable=False)
   password = Column(String, nullable=False)
-  amount = Column(Numeric(precision=10, scale=2), default=0.00)
+  amount = Column(Numeric(precision=10, scale=2), default=1000.00)
   user_type = Column(Enum(UserType), nullable=False)
 
   __table_args__ = (
@@ -26,7 +26,7 @@ class User(Base):
   )
 
 class Transfer(Base):
-  __tablename__ = 'trasnfers'
+  __tablename__ = 'transfers'
   id = Column(Integer, primary_key=True, autoincrement=True)
   from_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
   to_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
