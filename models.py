@@ -28,12 +28,12 @@ class User(Base):
 class Transfer(Base):
   __tablename__ = 'transfers'
   id = Column(Integer, primary_key=True, autoincrement=True)
-  from_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-  to_user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-  amount = Column(Numeric(precision=10, scale=2), nullable=False)
+  payer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+  payee_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+  value = Column(Numeric(precision=10, scale=2), nullable=False)
 
-  from_user = relationship("User", foreign_keys=[from_user_id])
-  to_user = relationship("User", foreign_keys=[to_user_id])
+  payer = relationship("User", foreign_keys=[payer_id])
+  payee = relationship("User", foreign_keys=[payee_id])
 
 # Configuração do banco de dados
 engine = create_engine('sqlite:///db.sqlite3')

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from models import session, User, UserType, Transfer
 from decimal import Decimal, InvalidOperation
+import requests
 
 app = Flask(__name__)
 api = Api(app)
@@ -55,11 +56,16 @@ class UserResource(Resource):
                 return {'message': 'CNPJ already exists'}, 400
             cpf = None
 
+        email = data['email']
+        if session.query(User).filter_by(email=email).first():
+            return {'message:': 'Email already exists'},400
+        
+
         new_user = User(
             name=data['name'],
             cpf=cpf,
             cnpj=cnpj,
-            email=data['email'],
+            email=email,
             password=data['password'],
             amount=data.get('amount', 1000.00),
             user_type=user_type_enum
@@ -110,42 +116,47 @@ class TransferResource(Resource):
             if transfer:
                 return jsonify({
                     'id': transfer.id,
-                    'from_user_id': transfer.from_user_id,
-                    'to_user_id': transfer.to_user_id,
-                    'amount': str(transfer.amount)
+                    'payer_id': transfer.payer_id,
+                    'payee_id': transfer.payee_id,
+                    'value': str(transfer.value)
                 })
             return {'message': 'Transfer not found'}, 404
         else:
             transfers = session.query(Transfer).all()
             return jsonify([{
                 'id': transfer.id,
-                'from_user_id': transfer.from_user_id,
-                'to_user_id': transfer.to_user_id,
-                'amount': str(transfer.amount)
+                'payer_id': transfer.payer_id,
+                'payee_id': transfer.payee_id,
+                'value': str(transfer.value)
             } for transfer in transfers])
 
     def post(self):
+        response = requests.get('https://util.devi.tools/api/v2/authorize').json()
         data = request.json
         try:
-            from_user = session.query(User).get(data['from_user_id'])
-            to_user = session.query(User).get(data['to_user_id'])
-            amount = Decimal(data['amount'])
+            payer = session.query(User).get(data['payer_id'])
+            payee = session.query(User).get(data['payee_id'])
+            value = Decimal(data['value'])
         except (KeyError, InvalidOperation):
             return {'message': 'Invalid input data'}, 400
 
-        if not from_user or not to_user:
+        if not payer or not payee:
             return {'message': 'User not found'}, 404
 
-        if from_user.user_type == UserType.RETAILER:
+        if payer.user_type == UserType.RETAILER:
             return {'message': 'Retailers cannot transfer money'}, 400
 
-        if from_user.amount < amount:
+        if payer.amount < value:
             return {'message': 'Insufficient funds'}, 400
 
-        from_user.amount -= amount
-        to_user.amount += amount
+        payer.amount -= value
+        payee.amount += value
 
-        transfer = Transfer(from_user_id=from_user.id, to_user_id=to_user.id, amount=amount)
+        transfer = Transfer(payer_id=payer.id, payee_id=payee.id, value=value)
+
+        if response.get('status') != 'success':
+            return {'message': 'Transfer failed. Unauthorized.'}
+        
         session.add(transfer)
         session.commit()
 
