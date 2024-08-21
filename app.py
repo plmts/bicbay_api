@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_restful import Api, Resource
 from models import session, User, UserType, Transfer
 from decimal import Decimal, InvalidOperation
-import requests
+import requests, random
 
 app = Flask(__name__)
 api = Api(app)
@@ -131,7 +131,7 @@ class TransferResource(Resource):
             } for transfer in transfers])
 
     def post(self):
-        response = requests.get('https://util.devi.tools/api/v2/authorize').json()
+        authorizer = requests.get('https://util.devi.tools/api/v2/authorize').json()
         data = request.json
         try:
             payer = session.query(User).get(data['payer_id'])
@@ -154,7 +154,7 @@ class TransferResource(Resource):
 
         transfer = Transfer(payer_id=payer.id, payee_id=payee.id, value=value)
 
-        if response.get('status') != 'success':
+        if authorizer.get('status') != 'success':
             return {'message': 'Transfer failed. Unauthorized.'}
         
         session.add(transfer)
